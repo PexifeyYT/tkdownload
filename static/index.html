@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Downloader</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23007aff'/><text x='50' y='68' text-anchor='middle' font-size='56' font-family='system-ui' fill='white'>&#8595;</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="app-icon">&#8595;</div>
+      <div>
+        <h1 class="app-title">Video Downloader</h1>
+        <p class="app-sub">TikTok &middot; YouTube &middot; Instagram</p>
+      </div>
+    </div>
+    <div class="toggle-wrap">
+      <div class="toggle-track" id="themeToggle" role="switch" aria-label="Toggle dark mode" tabindex="0">
+        <div class="toggle-thumb" id="toggleThumb"></div>
+      </div>
+      <span class="toggle-label" id="themeLabel">Dark</span>
+    </div>
+  </header>
+
+  <!-- Input card -->
+  <div class="card">
+    <div class="card-section">
+      <span class="field-label">URL</span>
+      <div class="input-group" id="inputGroup">
+        <input type="url" id="urlInput"
+               placeholder="TikTok, YouTube, or Instagram URL&hellip;"
+               autocomplete="off" spellcheck="false" autocorrect="off">
+      </div>
+      <div class="plat-row">
+        <span class="plat-badge" id="platBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download button -->
+  <div class="btn-wrap">
+    <button class="btn-pill" id="downloadBtn">
+      <span class="btn-text">Download</span>
+    </button>
+    <span class="elapsed" id="elapsed"></span>
+  </div>
+
+  <!-- Activity log -->
+  <div class="log-area" id="logArea"></div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
