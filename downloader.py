@@ -85,17 +85,62 @@ def download_tiktok(url: str, output_folder: str) -> tuple[bool, str, str]:
 
 # ── YouTube ───────────────────────────────────────────────────────────────────
 
+def _cobalt_download(url: str, output_folder: str) -> tuple[bool, str, str]:
+    """Download via cobalt.tools API — bypasses datacenter IP blocks."""
+    try:
+        resp = requests.post(
+            "https://api.cobalt.tools/",
+            json={"url": url, "videoQuality": "1080", "filenameStyle": "pretty"},
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return False, f"cobalt API unreachable: {e}", ""
+
+    status = data.get("status")
+    if status == "error":
+        code = data.get("error", {}).get("code", "unknown")
+        return False, f"cobalt error: {code}", ""
+    if status not in ("stream", "redirect", "tunnel"):
+        return False, f"cobalt unexpected status: {status}", ""
+
+    dl_url   = data["url"]
+    filename = data.get("filename") or "video.mp4"
+    filename = re.sub(r'[\\/*?:"<>|]', "", filename).strip() or "video.mp4"
+    filepath = os.path.join(output_folder, filename)
+
+    os.makedirs(output_folder, exist_ok=True)
+    try:
+        video_resp = requests.get(dl_url, stream=True, timeout=120,
+                                  headers={"User-Agent": "Mozilla/5.0"})
+        video_resp.raise_for_status()
+        with open(filepath, "wb") as f:
+            for chunk in video_resp.iter_content(chunk_size=65536):
+                if chunk:
+                    f.write(chunk)
+    except Exception as e:
+        return False, f"Download stream error: {e}", ""
+
+    return True, filename, filename
+
+
 def download_youtube(url: str, output_folder: str) -> tuple[bool, str, str]:
+    # cobalt.tools first — works from any IP including Vercel datacenters
+    ok, msg, fname = _cobalt_download(url, output_folder)
+    if ok:
+        return ok, msg, fname
+
+    # Fallback: yt-dlp (works on local / non-blocked IPs)
     if yt_dlp is None:
-        return False, "yt-dlp not installed — run: pip install yt-dlp", ""
+        return False, msg, ""
     try:
         os.makedirs(output_folder, exist_ok=True)
         before = set(os.listdir(output_folder))
 
-        if _FFMPEG:
-            fmt = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
-        else:
-            fmt = "best[ext=mp4]/best"
+        fmt = ("bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+               if _FFMPEG else "best[ext=mp4]/best")
 
         ydl_opts = {
             "format": fmt,
@@ -104,9 +149,6 @@ def download_youtube(url: str, output_folder: str) -> tuple[bool, str, str]:
             "no_warnings": True,
             "merge_output_format": "mp4",
             "extractor_args": {"youtube": {"player_client": ["tv_embedded", "android"]}},
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
-            },
         }
         if _FFMPEG:
             ydl_opts["ffmpeg_location"] = _FFMPEG
@@ -114,7 +156,7 @@ def download_youtube(url: str, output_folder: str) -> tuple[bool, str, str]:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        after    = set(os.listdir(output_folder))
+        after     = set(os.listdir(output_folder))
         new_files = [f for f in (after - before) if not f.endswith((".part", ".ytdl"))]
         mp4_files = [f for f in new_files if f.endswith(".mp4")]
 
@@ -122,7 +164,7 @@ def download_youtube(url: str, output_folder: str) -> tuple[bool, str, str]:
             return True, mp4_files[0], mp4_files[0]
         if new_files:
             return True, new_files[0], new_files[0]
-        return False, "Download failed — no output file created", ""
+        return False, "Download failed — no output file", ""
 
     except yt_dlp.utils.DownloadError as e:
         return False, f"yt-dlp: {str(e)[:200]}", ""
