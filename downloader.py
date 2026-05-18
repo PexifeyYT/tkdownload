@@ -103,6 +103,10 @@ def download_youtube(url: str, output_folder: str) -> tuple[bool, str, str]:
             "quiet": True,
             "no_warnings": True,
             "merge_output_format": "mp4",
+            "extractor_args": {"youtube": {"player_client": ["tv_embedded", "android"]}},
+            "http_headers": {
+                "User-Agent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            },
         }
         if _FFMPEG:
             ydl_opts["ffmpeg_location"] = _FFMPEG
